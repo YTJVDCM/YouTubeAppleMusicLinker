@@ -33,7 +33,13 @@ YouTubeで再生中の楽曲MVなどをiTunes経由で検索し、Apple Musicへ
 
 デフォルトブランチに `.github/workflows/distribution.yml` を配置すると、GitHubの **Actions → Build Firefox distribution ZIP → Run workflow** から手動実行できます。タグ付与・push・PRなどによる自動実行はありません。
 
-選択したブランチのコードに対して、依存の固定インストール、型検査、テスト、ビルド、web-ext検査、ZIP内容検査を順に実行します。すべて成功すると、実行画面のArtifactsから `youtube_apple_music_linker-<version>.zip` を直接取得できます。保存期間は30日で、実行サマリーにはSHA-256が表示されます。
+選択したブランチのコードに対して、Gitタグの版判定、依存の固定インストール、型検査、テスト、ビルド、web-ext検査、ZIP内容検査を順に実行します。すべて成功すると、実行画面のArtifactsから配布ZIPを直接取得できます。保存期間は30日で、実行サマリーにはバージョンとSHA-256が表示されます。
+
+- 対象コミットに `v1.2.3` または `1.2.3` のタグがある場合: `youtube_apple_music_linker-1.2.3.zip`。ZIP内部のmanifestも `1.2.3` になります。
+- タグがない場合: `youtube_apple_music_linker-<package.jsonの版>-dev-<コミットID先頭12桁>.zip`。内部manifestはpackage.jsonの版です。過去のタグを新しいコミットのリリース番号として流用しません。
+- 対象コミットに異なる版のタグが複数ある場合や、リリースタグが対応外の形式（先頭ゼロ・プレリリース接尾辞など）の場合はエラーになります。
+
+リリース用ZIPを作る際は、このWorkflowの変更を含む対象コミットにリリースタグを付けてから、そのコミットを対象に手動実行してください。タグ付与だけでは起動しません。ソースのpackage.json・manifest.jsonはWorkflowで書き換えず、生成物だけへ版を反映します。
 
 ZIPには、ルートのmanifest.json、ブラウザーで必要なJS・HTML、LICENSE、SOURCE.txtだけが入ります。Node.js依存、package.json、テスト、TypeScriptソース、Worker、開発設定は入りません。SOURCE.txtにはCIでビルドしたコミットのソースURLを記載します。Firefox側にNode.jsをインストールする必要はありません。
 

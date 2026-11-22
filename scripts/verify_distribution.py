@@ -66,10 +66,13 @@ def verify_archive(archive, expected_version):
 
 
 def main():
-    version = json.loads(Path("package.json").read_text())["version"]
-    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+    version = os.getenv("DISTRIBUTION_VERSION") or json.loads(Path("package.json").read_text())["version"]
+    if not re.fullmatch(r"(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})", version):
         raise ValueError("Unsupported package version")
-    archive = Path("web-ext-artifacts") / f"youtube_apple_music_linker-{version}.zip"
+    filename = os.getenv("WEB_EXT_FILENAME") or f"youtube_apple_music_linker-{version}.zip"
+    if not re.fullmatch(rf"youtube_apple_music_linker-{re.escape(version)}(?:-dev-[a-f0-9]{{12}})?\.zip", filename):
+        raise ValueError("Distribution filename/version mismatch")
+    archive = Path("web-ext-artifacts") / filename
     names = verify_archive(archive, version)
     repository, revision = os.getenv("GITHUB_REPOSITORY"), os.getenv("GITHUB_SHA")
     if repository and revision:
@@ -84,7 +87,7 @@ def main():
             stream.write(f"zip={archive.as_posix()}\nsha256={digest}\n")
     if summary := os.getenv("GITHUB_STEP_SUMMARY"):
         with open(summary, "a", encoding="utf-8") as stream:
-            stream.write(f"### Firefox distribution\n\nFile: `{archive.name}`\n\nSHA-256: `{digest}`\n\n"
+            stream.write(f"### Firefox distribution\n\nVersion: `{version}`\n\nFile: `{archive.name}`\n\nSHA-256: `{digest}`\n\n"
                          "ZIP verified: extension runtime files and license only; no Node.js dependencies or tests.\n")
 
 

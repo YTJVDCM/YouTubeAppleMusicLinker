@@ -79,6 +79,7 @@ class DistributionTests(unittest.TestCase):
         (root / "web-ext-artifacts").mkdir()
         self.archive = root / "web-ext-artifacts/youtube_apple_music_linker-0.2.3.zip"
         return root, {"GITHUB_REPOSITORY": "example/project", "GITHUB_SHA": "a" * 40,
+                      "DISTRIBUTION_VERSION": "0.2.3", "WEB_EXT_FILENAME": self.archive.name,
                       "GITHUB_OUTPUT": str(root / "outputs"), "GITHUB_STEP_SUMMARY": str(root / "summary")}
 
     def test_ci_outputs_exact_zip_path_and_checksum(self):
@@ -107,6 +108,25 @@ class DistributionTests(unittest.TestCase):
                 main()
         finally:
             os.chdir(previous)
+
+    def test_ci_tag_version_overrides_package_version_without_modifying_it(self):
+        root, env = self.prepare_ci()
+        env.update(DISTRIBUTION_VERSION="1.2.3", WEB_EXT_FILENAME="youtube_apple_music_linker-1.2.3.zip")
+        self.archive = root / "web-ext-artifacts" / env["WEB_EXT_FILENAME"]
+        manifest = json.loads(self.files["manifest.json"])
+        manifest["version"] = "1.2.3"
+        self.files["manifest.json"] = json.dumps(manifest)
+        self.files["SOURCE.txt"] = f'Source code: https://github.com/example/project/tree/{"a" * 40}\n'
+        self.write()
+        previous = Path.cwd()
+        try:
+            os.chdir(root)
+            with patch.dict(os.environ, env), contextlib.redirect_stdout(io.StringIO()):
+                main()
+        finally:
+            os.chdir(previous)
+        self.assertIn("-1.2.3.zip", (root / "outputs").read_text())
+        self.assertEqual(json.loads((root / "package.json").read_text())["version"], "0.2.3")
 
 
 if __name__ == "__main__":

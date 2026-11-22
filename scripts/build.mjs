@@ -2,8 +2,10 @@ import { build } from 'esbuild';
 import { mkdir, copyFile, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { packagedManifest, manifestResources } from './manifest.mjs';
+import { validateVersion } from './distribution-version.mjs';
 const sourceManifest = JSON.parse(await readFile('manifest.json', 'utf8'));
 const manifest = packagedManifest(sourceManifest);
+if (process.env.DISTRIBUTION_VERSION) manifest.version = validateVersion(process.env.DISTRIBUTION_VERSION);
 await mkdir('dist/extension', { recursive: true });
 await build({ entryPoints: { background: 'src/entrypoints/background.ts', youtube: 'src/entrypoints/youtube.content.ts',
   options: 'src/entrypoints/options.ts', popup: 'src/entrypoints/popup.ts' }, outdir: 'dist/extension', bundle: true, format: 'iife', target: 'firefox140' });
