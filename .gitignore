@@ -11,7 +11,8 @@ coverage/
 *.pem
 *.p8
 *.key
-.claude/settings.local.json
 *.tsbuildinfo
 web-ext-artifacts/
-.codex/config.toml
+.codex/
+.claude/
+.DS_Store
