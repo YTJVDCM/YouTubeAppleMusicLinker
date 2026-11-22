@@ -38,7 +38,7 @@ ZIPには、ルートのmanifest.json、ブラウザーで必要なJS・HTML、L
 
 このWorkflowはZIP作成とArtifact保存までです。AMO署名・公開、GitHub Release作成、タグ付加、デプロイは行いません。GitHub上での手動実行には、このWorkflowがデフォルトブランチに存在する必要があります。
 
-ローカルで同じ検証を行う場合は、Node.js 22とPython 3を用意して実行します。Pythonは配布ZIPの検査だけに使い、配布物へ同梱しません。
+ローカルで同じ検証を行う場合は、Node.js 26とPython 3を用意して実行します。Pythonは配布ZIPの検査だけに使い、配布物へ同梱しません。
 
 ```sh
 npm ci
