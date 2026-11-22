@@ -1,10 +1,10 @@
 # Firefox実機チェック（未実施）
 
-事前にnpmの型検査・テスト・ビルドを通し、dist/extension/manifest.jsonをFirefox Desktop 140以上へ一時読み込みする。自分のWorkerにDeveloper Tokenとレート制限を設定し、拡張設定にHTTPS /match URLを保存する。これらのデプロイ・実API送信は人間の判断で行う。
+事前にnpmの型検査・テスト・ビルドを通し、リポジトリ直下のmanifest.jsonまたはdist/extension/manifest.jsonをFirefox Desktop 140以上へ一時読み込みする。直下版も生成ファイルを参照するためビルドは必須。自分のWorkerにDeveloper Tokenとレート制限を設定し、拡張設定にHTTPS /match URLを保存する。これらのデプロイ・実API送信は人間の判断で行う。
 
 ## ボタンが表示されない場合
 
-1. リポジトリ直下のmanifest.jsonはビルド入力。読み込むファイルが **dist/extension/manifest.json** であることを確認する。
+1. about:debuggingでバージョンが **0.1.1以上** であることを確認する。0.1.0の直下manifestには参照切れがあった。0.1.1からは直下版・dist版とも読み込み可能。更新後のnpm run buildは必須。
 2. about:debuggingでアドオンを再読み込みした後、既に開いていたYouTube動画ページも再読み込みする。
 3. Firefoxの拡張機能メニューから本アドオンを開く。診断ポップアップで、YouTubeへの権限不足・Content Scriptの未応答・ボタン配置済みを区別する。権限許可やページ再読み込みは専用ボタンから明示操作で行える。
 4. 未応答が続く場合、about:debuggingの本アドオンの「調査」から拡張側コンソールを確認する。ページ側コンソールにエラーがないことだけでは、注入済みとは判断できない。

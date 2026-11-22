@@ -34,7 +34,7 @@ npm run lint
 npm run package
 ```
 
-Firefoxのabout:debugging → このFirefox → 一時的なアドオンを読み込む、からdist/extension/manifest.jsonを選ぶ。設定画面で自分が管理・信頼するWorkerのHTTPS /match URLを保存し、接続権限を許可する。サーバー未設定時は検索エラーと手動検索導線を表示する。
+Firefoxのabout:debugging → このFirefox → 一時的なアドオンを読み込む、からmanifest.json（直下）またはdist/extension/manifest.jsonを選ぶ。0.1.1以降は両方をサポートし、ビルド時に両manifestの参照先ファイルとHTML内のスクリプトの存在を検証する。設定画面で自分が管理・信頼するWorkerのHTTPS /match URLを保存し、接続権限を許可する。サーバー未設定時は検索エラーと手動検索導線を表示する。
 
 Workerはworker/wrangler.tomlを使用する。Apple Developerの利用資格・カタログAPI利用条件を確認し、有効なDeveloper TokenをAPPLE_MUSIC_TOKENというサーバーシークレットに登録する。署名鍵はバックエンド運用環境だけで管理し、トークンも有効期限前に更新する。トークン発行エンドポイントは公開しない。RATE_LIMITERバインディングは必須で、未設定時は503とする。公開前に自分のアカウントに合わせnamespace_idと制限値、費用上限、アクセス制御を確認する。アプリケーションはログを出さず、インフラ側のアクセスログ・保持期間も運用者が確認する。今回デプロイ・実API通信は行っていない。
 
