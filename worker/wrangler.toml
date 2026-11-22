@@ -1,0 +1,9 @@
+name = "youtube-apple-music-match"
+main = "src/index.ts"
+compatibility_date = "2026-11-22"
+
+# Configure APPLE_MUSIC_TOKEN as a secret, never as a variable in this file.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }

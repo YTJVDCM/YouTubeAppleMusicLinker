@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apple Music Linker 設定</title>
+<body><h1>Apple Music Linker 設定</h1>
+<p>検索ボタンを押すと、動画タイトル・チャンネル名・再生時間・説明欄のApple Musicリンクを設定した照合サーバーへ送信します。動画URLや音声は送信しません。</p>
+<form id="settings">
+<p><label>照合サーバーのHTTPS URL（/matchを含む） <input id="endpoint" type="url" required size="55"></label></p>
+<p><label>ストアフロント <input id="storefront" pattern="[a-z]{2}" maxlength="2" required></label></p>
+<p><label><input id="reuseTabs" type="checkbox">既存Apple Musicタブを再利用</label></p>
+<p><label><input id="protectAudible" type="checkbox">音声再生中のタブを保護</label></p>
+<p><label><input id="reusePinned" type="checkbox">ピン留めタブも再利用</label></p>
+<p><label><input id="reuseOtherWindows" type="checkbox">別ウィンドウのタブも再利用</label></p>
+<button type="submit">保存してサーバーへの接続を許可</button>
+</form><p><button id="clear">照合キャッシュをすべて削除</button></p>
+<p id="status" role="status"></p><script src="options.js"></script></body></html>
