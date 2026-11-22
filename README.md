@@ -9,8 +9,8 @@ YouTubeで再生中の楽曲MVなどをiTunes経由で検索し、Apple Musicへ
 ### Firefox
 
 > [!IMPORTANT]
-> 通常版Firefoxでは未署名アドオンの永続的インストールができません。
-> 起動毎につどインストールするか、永続化したい場合はFirefox Developer Editionを使ってください。
+> 通常版Firefoxでは未署名アドオンの永続的インストールができません。  
+> 起動毎に都度インストールするか、永続化したい場合はFirefox Developer Editionを使ってください。
 
 1. zipをダウンロード
 1. 展開
