@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { it, expect, vi, afterEach } from 'vitest';
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); document.documentElement.innerHTML = '<head></head><body></body>'; });
-it('mounts once, waits for interaction, discards stale results, and closes with Escape', async () => {
+it('toggles and dismisses the panel without duplicate searches, while retaining SPA and keyboard behavior', async () => {
   vi.useFakeTimers();
   const realAttach = Element.prototype.attachShadow;
   let shadow: ShadowRoot;
@@ -21,12 +21,19 @@ it('mounts once, waits for interaction, discards stale results, and closes with 
   expect(document.querySelectorAll('#yt-apple-music-linker')).toHaveLength(1);
   expect(sendMessage).not.toHaveBeenCalled();
   const launcher = shadow!.querySelector('.launcher') as HTMLButtonElement;
+  const trustedClick = (target: Element) => {
+    const event = new MouseEvent('click', { bubbles: true, composed: true });
+    Object.defineProperty(event, 'isTrusted', { value: true }); target.dispatchEvent(event); return event;
+  };
+  const panel = shadow!.querySelector('.panel') as HTMLElement;
   const click = new MouseEvent('click', { bubbles: true }); Object.defineProperty(click, 'isTrusted', { value: true });
   launcher.dispatchEvent(click);
+  expect(panel.hidden).toBe(false); expect(launcher.getAttribute('aria-expanded')).toBe('true');
   launcher.dispatchEvent(click);
+  expect(panel.hidden).toBe(true); expect(launcher.getAttribute('aria-expanded')).toBe('false');
+  trustedClick(launcher);
   expect(sendMessage).toHaveBeenCalledTimes(1);
   const request = sendMessage.mock.calls[0] as unknown as [{ requestId: string }];
-  const panel = shadow!.querySelector('.panel') as HTMLElement;
   expect(panel.hidden).toBe(false);
   // A same-document navigation invalidates the outstanding request immediately.
   window.history.replaceState({}, '', 'https://www.youtube.com/watch?v=lmnopqrstuv');
@@ -47,10 +54,11 @@ it('mounts once, waits for interaction, discards stale results, and closes with 
       url: 'https://music.apple.com/jp/album/2?i=1', score: .95, confidence: 'high', reasons: [], audioUnconfirmed: false,
       album: { id: '2', title: 'Album', url: 'https://music.apple.com/jp/album/2', tracks: [] } }], ambiguous: false } } });
   await vi.waitFor(() => expect(panel.textContent).toContain('iTunesカタログで照合'));
+  expect(panel.hidden).toBe(true); // A pending response must not reopen a dismissed panel.
+  trustedClick(launcher); expect(panel.hidden).toBe(false);
+  expect(sendMessage).toHaveBeenCalledTimes(2);
+  trustedClick(panel.querySelector('h3')!); expect(panel.hidden).toBe(false);
   expect(panel.textContent).toContain('Song <img src=x>'); expect(panel.querySelector('img')).toBeNull();
-  const trustedClick = (button: Element) => {
-    const event = new MouseEvent('click'); Object.defineProperty(event, 'isTrusted', { value: true }); button.dispatchEvent(event);
-  };
   trustedClick([...panel.querySelectorAll('button')].find(b => b.textContent === 'この候補を記憶')!);
   expect(sendMessage).toHaveBeenLastCalledWith({ type: 'select', videoId: 'lmnopqrstuv', candidateId: '1', kind: 'song' });
   resolve({ ok: true, value: null });
@@ -59,5 +67,15 @@ it('mounts once, waits for interaction, discards stale results, and closes with 
   expect(sendMessage).toHaveBeenLastCalledWith({ type: 'album', videoId: 'lmnopqrstuv', candidateId: '1', kind: 'song' });
   resolve({ ok: true, value: { id: '2', title: 'Album', url: 'https://music.apple.com/jp/album/2', tracks: [{ id: '1', title: 'Track 1' }] } });
   await vi.waitFor(() => expect(panel.querySelector('li')?.textContent).toBe('Track 1'));
+  const outside = document.createElement('input'); document.body.append(outside); outside.focus();
+  outside.addEventListener('click', event => event.stopPropagation());
+  const outsideClick = trustedClick(outside);
+  expect(panel.hidden).toBe(true); expect(launcher.getAttribute('aria-expanded')).toBe('false');
+  expect(outsideClick.defaultPrevented).toBe(false); expect(document.activeElement).toBe(outside);
+  const calls = sendMessage.mock.calls.length;
+  trustedClick(launcher); expect(panel.hidden).toBe(false);
+  expect(panel.querySelector('li')?.textContent).toBe('Track 1'); expect(sendMessage).toHaveBeenCalledTimes(calls);
+  trustedClick([...panel.querySelectorAll('button')].find(b => b.textContent === '閉じる')!);
+  expect(panel.hidden).toBe(true); expect(shadow!.activeElement).toBe(launcher);
   attach.mockRestore();
 });

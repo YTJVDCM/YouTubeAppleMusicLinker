@@ -12,6 +12,9 @@ function mount() {
   shadow.append(style);
   const button = document.createElement('button'); button.className = 'launcher'; button.textContent = 'Apple Music';
   const panel = document.createElement('section'); panel.className = 'panel'; panel.hidden = true;
+  panel.id = 'apple-music-panel';
+  button.setAttribute('aria-controls', panel.id); button.setAttribute('aria-haspopup', 'dialog');
+  button.setAttribute('aria-expanded', 'false');
   panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Apple Musicの候補');
   shadow.append(button, panel); document.documentElement.append(host);
   let videoId: string | undefined, generation = 0, loading = false;
@@ -19,13 +22,14 @@ function mount() {
   const action = (label: string, callback: () => void, parent = panel) => {
     const el = document.createElement('button'); el.textContent = label; el.addEventListener('click', e => { if (e.isTrusted) callback(); }); parent.append(el); return el;
   };
-  const close = () => { panel.hidden = true; button.focus(); };
+  const setOpen = (open: boolean) => { panel.hidden = !open; button.setAttribute('aria-expanded', String(open)); };
+  const close = (restoreFocus = true) => { setOpen(false); if (restoreFocus) button.focus(); };
   const header = () => { panel.replaceChildren(); action('閉じる', close); text('h2', 'Apple Music'); };
   const sync = () => {
     // YouTube or a page extension may replace/remove the host after injection.
     if (!host.isConnected) document.documentElement.append(host);
     const current = youtubeVideoId(location.href);
-    if (current !== videoId) { videoId = current; generation++; loading = false; panel.hidden = true; panel.replaceChildren(); }
+    if (current !== videoId) { videoId = current; generation++; loading = false; setOpen(false); panel.replaceChildren(); }
     button.hidden = !current;
   };
   const send = async (message: ContentMessage) => {
@@ -79,7 +83,7 @@ function mount() {
   };
   async function search(refresh = false) {
     sync(); if (!videoId || loading) return;
-    const id = videoId, ticket = ++generation; loading = true; panel.hidden = false;
+    const id = videoId, ticket = ++generation; loading = true; setOpen(true);
     header(); text('p', 'iTunesで検索しています…'); panel.querySelector('button')?.focus();
     const metadata = extractMetadata(document, id);
     if (!metadata) {
@@ -111,7 +115,18 @@ function mount() {
       }
     }
   }
-  button.addEventListener('click', e => { if (e.isTrusted) void search(); });
+  button.addEventListener('click', e => {
+    if (!e.isTrusted) return;
+    sync(); if (!videoId) return;
+    if (!panel.hidden) { close(); return; }
+    if (panel.childNodes.length) { setOpen(true); panel.querySelector('button')?.focus(); }
+    else void search();
+  });
+  // Closed Shadow DOM retargets internal clicks to the host at document level.
+  // Capture avoids depending on YouTube's bubbling handlers; never cancel its click.
+  document.addEventListener('click', e => {
+    if (e.isTrusted && !panel.hidden && !e.composedPath().includes(host)) close(false);
+  }, true);
   shadow.addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Escape') close(); });
   document.addEventListener('yt-navigate-finish', sync); window.addEventListener('popstate', sync);
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
