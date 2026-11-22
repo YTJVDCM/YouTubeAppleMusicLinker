@@ -7,6 +7,7 @@
   "optional_host_permissions": ["https://*/*"],
   "host_permissions": ["https://www.youtube.com/*", "https://youtube.com/*"],
   "background": { "scripts": ["background.js"] },
+  "action": { "default_title": "Apple Music Linker：表示状態を確認", "default_popup": "popup.html" },
   "content_scripts": [{ "matches": ["https://www.youtube.com/*", "https://youtube.com/*"], "js": ["youtube.js"] }],
   "options_ui": { "page": "options.html", "open_in_tab": true },
   "browser_specific_settings": { "gecko": { "id": "youtube-apple-music-linker@local.invalid", "strict_min_version": "140.0",

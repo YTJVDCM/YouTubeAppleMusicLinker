@@ -12,8 +12,12 @@ it('mounts once, waits for interaction, discards stale results, and closes with 
   document.body.innerHTML = '<h1 class="ytd-watch-metadata">Artist - Song</h1>';
   let resolve!: (value: unknown) => void;
   const sendMessage = vi.fn(() => new Promise(r => { resolve = r; }));
-  vi.stubGlobal('browser', { runtime: { sendMessage } });
+  vi.stubGlobal('browser', { runtime: { sendMessage, onMessage: { addListener: vi.fn() } } });
   await import('../src/entrypoints/youtube.content');
+  expect(document.querySelectorAll('#yt-apple-music-linker')).toHaveLength(1);
+  expect(sendMessage).not.toHaveBeenCalled();
+  document.getElementById('yt-apple-music-linker')!.remove();
+  await vi.advanceTimersByTimeAsync(1000);
   expect(document.querySelectorAll('#yt-apple-music-linker')).toHaveLength(1);
   expect(sendMessage).not.toHaveBeenCalled();
   const launcher = shadow!.querySelector('.launcher') as HTMLButtonElement;

@@ -21,6 +21,8 @@ function mount() {
   const close = () => { panel.hidden = true; button.focus(); };
   const header = () => { panel.replaceChildren(); action('閉じる', close); text('h2', 'Apple Music'); };
   const sync = () => {
+    // YouTube or a page extension may replace/remove the host after injection.
+    if (!host.isConnected) document.documentElement.append(host);
     const current = youtubeVideoId(location.href);
     if (current !== videoId) { videoId = current; generation++; loading = false; panel.hidden = true; panel.replaceChildren(); }
     button.hidden = !current;
@@ -85,6 +87,12 @@ function mount() {
   button.addEventListener('click', e => { if (e.isTrusted) void search(); });
   shadow.addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Escape') close(); });
   document.addEventListener('yt-navigate-finish', sync); window.addEventListener('popstate', sync);
+  browser.runtime.onMessage.addListener((message: unknown, sender) => {
+    if (sender.id !== browser.runtime.id || !message || typeof message !== 'object' ||
+      (message as { type?: string }).type !== 'ui-status') return;
+    sync();
+    return Promise.resolve({ mounted: host.isConnected, watchPage: !!videoId, buttonHidden: button.hidden });
+  });
   setInterval(sync, 1000); sync();
 }
 function extract(): PublicMetadata {
