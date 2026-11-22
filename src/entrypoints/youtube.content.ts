@@ -22,7 +22,10 @@ function mount() {
   const action = (label: string, callback: () => void, parent = panel) => {
     const el = document.createElement('button'); el.textContent = label; el.addEventListener('click', e => { if (e.isTrusted) callback(); }); parent.append(el); return el;
   };
-  const setOpen = (open: boolean) => { panel.hidden = !open; button.setAttribute('aria-expanded', String(open)); };
+  const setOpen = (open: boolean) => {
+    const visible = open && !document.fullscreenElement;
+    panel.hidden = !visible; button.setAttribute('aria-expanded', String(visible));
+  };
   const close = (restoreFocus = true) => { setOpen(false); if (restoreFocus) button.focus(); };
   const header = () => { panel.replaceChildren(); action('閉じる', close); text('h2', 'Apple Music'); };
   const sync = () => {
@@ -30,7 +33,8 @@ function mount() {
     if (!host.isConnected) document.documentElement.append(host);
     const current = youtubeVideoId(location.href);
     if (current !== videoId) { videoId = current; generation++; loading = false; setOpen(false); panel.replaceChildren(); }
-    button.hidden = !current;
+    button.hidden = !current || !!document.fullscreenElement;
+    if (document.fullscreenElement) close(false);
   };
   const send = async (message: ContentMessage) => {
     const ticket = generation;
@@ -82,7 +86,7 @@ function mount() {
     }
   };
   async function search(refresh = false) {
-    sync(); if (!videoId || loading) return;
+    sync(); if (!videoId || button.hidden || loading) return;
     const id = videoId, ticket = ++generation; loading = true; setOpen(true);
     header(); text('p', 'iTunesで検索しています…'); panel.querySelector('button')?.focus();
     const metadata = extractMetadata(document, id);
@@ -117,7 +121,7 @@ function mount() {
   }
   button.addEventListener('click', e => {
     if (!e.isTrusted) return;
-    sync(); if (!videoId) return;
+    sync(); if (!videoId || button.hidden) return;
     if (!panel.hidden) { close(); return; }
     if (panel.childNodes.length) { setOpen(true); panel.querySelector('button')?.focus(); }
     else void search();
@@ -129,6 +133,7 @@ function mount() {
   }, true);
   shadow.addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Escape') close(); });
   document.addEventListener('yt-navigate-finish', sync); window.addEventListener('popstate', sync);
+  document.addEventListener('fullscreenchange', sync);
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
     if (sender.id !== browser.runtime.id || !message || typeof message !== 'object' ||
       (message as { type?: string }).type !== 'ui-status') return;

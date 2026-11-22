@@ -1,6 +1,10 @@
 // @vitest-environment happy-dom
 import { it, expect, vi, afterEach } from 'vitest';
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); document.documentElement.innerHTML = '<head></head><body></body>'; });
+afterEach(() => {
+  vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks();
+  Reflect.deleteProperty(document, 'fullscreenElement');
+  document.documentElement.innerHTML = '<head></head><body></body>';
+});
 it('toggles and dismisses the panel without duplicate searches, while retaining SPA and keyboard behavior', async () => {
   vi.useFakeTimers();
   const realAttach = Element.prototype.attachShadow;
@@ -26,6 +30,14 @@ it('toggles and dismisses the panel without duplicate searches, while retaining 
     Object.defineProperty(event, 'isTrusted', { value: true }); target.dispatchEvent(event); return event;
   };
   const panel = shadow!.querySelector('.panel') as HTMLElement;
+  // happy-dom does not implement Fullscreen API; model the browser's readonly getter.
+  Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+  const fullscreen = vi.spyOn(document, 'fullscreenElement', 'get').mockReturnValue(document.documentElement);
+  document.dispatchEvent(new Event('fullscreenchange'));
+  expect(launcher.hidden).toBe(true); expect(panel.hidden).toBe(true);
+  trustedClick(launcher); expect(sendMessage).not.toHaveBeenCalled();
+  fullscreen.mockReturnValue(null); document.dispatchEvent(new Event('fullscreenchange'));
+  expect(launcher.hidden).toBe(false); expect(panel.hidden).toBe(true);
   const click = new MouseEvent('click', { bubbles: true }); Object.defineProperty(click, 'isTrusted', { value: true });
   launcher.dispatchEvent(click);
   expect(panel.hidden).toBe(false); expect(launcher.getAttribute('aria-expanded')).toBe('true');
@@ -33,6 +45,12 @@ it('toggles and dismisses the panel without duplicate searches, while retaining 
   expect(panel.hidden).toBe(true); expect(launcher.getAttribute('aria-expanded')).toBe('false');
   trustedClick(launcher);
   expect(sendMessage).toHaveBeenCalledTimes(1);
+  fullscreen.mockReturnValue(document.documentElement); document.dispatchEvent(new Event('fullscreenchange'));
+  expect(launcher.hidden).toBe(true); expect(panel.hidden).toBe(true);
+  expect(launcher.getAttribute('aria-expanded')).toBe('false');
+  fullscreen.mockReturnValue(null); document.dispatchEvent(new Event('fullscreenchange'));
+  expect(launcher.hidden).toBe(false); expect(panel.hidden).toBe(true);
+  trustedClick(launcher); expect(sendMessage).toHaveBeenCalledTimes(1);
   const request = sendMessage.mock.calls[0] as unknown as [{ requestId: string }];
   expect(panel.hidden).toBe(false);
   // A same-document navigation invalidates the outstanding request immediately.
@@ -49,12 +67,16 @@ it('toggles and dismisses the panel without duplicate searches, while retaining 
   panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   expect(panel.hidden).toBe(true);
   const secondRequest = sendMessage.mock.calls[1] as unknown as [{ requestId: string }];
+  fullscreen.mockReturnValue(document.documentElement); document.dispatchEvent(new Event('fullscreenchange'));
   resolve({ ok: true, value: { videoId: 'lmnopqrstuv', requestId: secondRequest[0].requestId,
     result: { candidates: [{ provider: 'itunes', id: '1', kind: 'song', title: 'Song <img src=x>', artist: 'Artist',
       url: 'https://music.apple.com/jp/album/2?i=1', score: .95, confidence: 'high', reasons: [], audioUnconfirmed: false,
       album: { id: '2', title: 'Album', url: 'https://music.apple.com/jp/album/2', tracks: [] } }], ambiguous: false } } });
   await vi.waitFor(() => expect(panel.textContent).toContain('iTunesカタログで照合'));
   expect(panel.hidden).toBe(true); // A pending response must not reopen a dismissed panel.
+  expect(launcher.hidden).toBe(true);
+  fullscreen.mockReturnValue(null); document.dispatchEvent(new Event('fullscreenchange'));
+  expect(launcher.hidden).toBe(false); expect(panel.hidden).toBe(true);
   trustedClick(launcher); expect(panel.hidden).toBe(false);
   expect(sendMessage).toHaveBeenCalledTimes(2);
   trustedClick(panel.querySelector('h3')!); expect(panel.hidden).toBe(false);
@@ -78,4 +100,5 @@ it('toggles and dismisses the panel without duplicate searches, while retaining 
   trustedClick([...panel.querySelectorAll('button')].find(b => b.textContent === '閉じる')!);
   expect(panel.hidden).toBe(true); expect(shadow!.activeElement).toBe(launcher);
   attach.mockRestore();
+  fullscreen.mockRestore();
 });

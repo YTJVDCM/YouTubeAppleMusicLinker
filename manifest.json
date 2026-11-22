@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube → Apple Music Linker",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "YouTubeの動画からApple Musicの候補を探し、確認して開きます。",
   "permissions": ["storage", "tabs", "cookies"],
   "optional_host_permissions": ["https://itunes.apple.com/*", "https://musicbrainz.org/*"],
