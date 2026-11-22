@@ -9,6 +9,15 @@ await build({ entryPoints: { background: 'src/entrypoints/background.ts', youtub
   options: 'src/entrypoints/options.ts', popup: 'src/entrypoints/popup.ts' }, outdir: 'dist/extension', bundle: true, format: 'iife', target: 'firefox140' });
 await copyFile('src/entrypoints/options.html', 'dist/extension/options.html');
 await copyFile('src/entrypoints/popup.html', 'dist/extension/popup.html');
+await copyFile('LICENSE', 'dist/extension/LICENSE');
+let sourceNotice = 'Source code: the repository used to build this extension.\n';
+if (process.env.GITHUB_REPOSITORY && process.env.GITHUB_SHA) {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(process.env.GITHUB_REPOSITORY) || !/^[a-f\d]{40}$/i.test(process.env.GITHUB_SHA)) {
+    throw new Error('Invalid CI source revision');
+  }
+  sourceNotice = `Source code: https://github.com/${process.env.GITHUB_REPOSITORY}/tree/${process.env.GITHUB_SHA}\n`;
+}
+await writeFile('dist/extension/SOURCE.txt', `${sourceNotice}License: Mozilla Public License 2.0 (see LICENSE).\n`);
 await writeFile('dist/extension/manifest.json', JSON.stringify(manifest, null, 2) + '\n');
 // Both the root development manifest and the packaged manifest must resolve.
 for (const [root, value] of [['.', sourceManifest], ['dist/extension', manifest]]) {

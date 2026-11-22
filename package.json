@@ -8,7 +8,9 @@
     "test": "vitest run",
     "build": "node scripts/build.mjs",
     "lint": "web-ext lint --source-dir dist/extension --warnings-as-errors",
-    "package": "web-ext build --source-dir dist/extension --overwrite-dest"
+    "package": "web-ext build --source-dir dist/extension --overwrite-dest",
+    "test:distribution": "python3 -m unittest discover -s tests/distribution -p 'test_*.py'",
+    "verify:distribution": "python3 scripts/verify_distribution.py"
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^120.0.0",

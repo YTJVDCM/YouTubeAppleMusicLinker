@@ -1,0 +1,59 @@
+name: Build Firefox distribution ZIP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  distribution:
+    name: Validate and package Firefox extension
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out selected revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked development dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run extension tests
+        run: npm test
+
+      - name: Test distribution validation
+        run: npm run test:distribution
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Validate extension with web-ext
+        run: npm run lint
+
+      - name: Create distribution ZIP
+        run: npm run package
+
+      - name: Verify ZIP contents and calculate checksum
+        id: distribution
+        run: npm run verify:distribution
+
+      - name: Upload distribution ZIP
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: ${{ steps.distribution.outputs.zip }}
+          archive: false
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30

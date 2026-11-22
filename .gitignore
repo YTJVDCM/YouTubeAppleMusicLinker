@@ -16,3 +16,5 @@ web-ext-artifacts/
 .codex/
 .claude/
 .DS_Store
+__pycache__/
+*.py[cod]

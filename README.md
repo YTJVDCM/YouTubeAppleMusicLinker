@@ -28,3 +28,26 @@ YouTubeで再生中の楽曲MVなどをiTunes経由で検索し、Apple Musicへ
 1. `ファイルからアドオンをインストール...`を押す
 1. 先ほどダウンロードしたzipを指定
 
+## GitHub Actionsで配布ZIPを作成
+
+デフォルトブランチに `.github/workflows/distribution.yml` を配置すると、GitHubの **Actions → Build Firefox distribution ZIP → Run workflow** から手動実行できます。タグ付与・push・PRなどによる自動実行はありません。
+
+選択したブランチのコードに対して、依存の固定インストール、型検査、テスト、ビルド、web-ext検査、ZIP内容検査を順に実行します。すべて成功すると、実行画面のArtifactsから `youtube_apple_music_linker-<version>.zip` を直接取得できます。保存期間は30日で、実行サマリーにはSHA-256が表示されます。
+
+ZIPには、ルートのmanifest.json、ブラウザーで必要なJS・HTML、LICENSE、SOURCE.txtだけが入ります。Node.js依存、package.json、テスト、TypeScriptソース、Worker、開発設定は入りません。SOURCE.txtにはCIでビルドしたコミットのソースURLを記載します。Firefox側にNode.jsをインストールする必要はありません。
+
+このWorkflowはZIP作成とArtifact保存までです。AMO署名・公開、GitHub Release作成、タグ付加、デプロイは行いません。GitHub上での手動実行には、このWorkflowがデフォルトブランチに存在する必要があります。
+
+ローカルで同じ検証を行う場合は、Node.js 22とPython 3を用意して実行します。Pythonは配布ZIPの検査だけに使い、配布物へ同梱しません。
+
+```sh
+npm ci
+npm run typecheck
+npm test
+npm run test:distribution
+npm run build
+npm run lint
+npm run package
+npm run verify:distribution
+```
+
