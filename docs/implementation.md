@@ -1,6 +1,6 @@
 # MVP実装と検証
 
-**現在の方式（0.2.0）:** iTunesを主系統・MusicBrainzを補助とするサーバー不要の検索へ変更済み。現在のセットアップと差分は[切替記録](itunes-main-implementation.md)と[実機チェック](manual-checks.md)を参照。以下のWorker必須・endpoint設定に関する説明は0.1.x時点の記録であり、通常利用には不要。
+**現在の方式（0.2.1）:** iTunes主系統・MusicBrainz補助のサーバー不要検索。通信とSPA再検索を修正し、YouTubeの曲・アーティスト・アルバム情報も補完に利用。現在のセットアップと差分は[切替記録](itunes-main-implementation.md)、[通信・SPA修正](search-and-spa-fix.md)、[実機チェック](manual-checks.md)を参照。以下のWorker必須・endpoint設定に関する説明は0.1.x時点の記録であり、通常利用には不要。
 
 ## 構成と判断
 

@@ -15,12 +15,17 @@ browser.tabs.onRemoved.addListener(tabId => {
 browser.runtime.onMessage.addListener((raw: unknown, sender) => handle(raw, sender));
 async function handle(raw: unknown, sender: browser.runtime.MessageSender): Promise<unknown> {
   const fail = (message: string) => ({ ok: false, error: { code: 'invalid-request', message } });
-  if (!raw || typeof raw !== 'object' || !sender.tab || sender.frameId !== 0 ||
+  if (!raw || typeof raw !== 'object' || sender.tab?.id === undefined || sender.frameId !== 0 ||
     sender.id !== browser.runtime.id) return fail('無効な操作です。');
   const message = raw as ContentMessage;
-  if (!message.videoId || youtubeVideoId(sender.url ?? '') !== message.videoId ||
-    youtubeVideoId(sender.tab.url ?? '') !== message.videoId) return fail('動画が切り替わりました。');
+  // Sender snapshots may retain the document's initial URL after history.pushState.
   try {
+    const origin = new URL(sender.url ?? '').origin;
+    if (!['https://www.youtube.com', 'https://youtube.com'].includes(origin)) return fail('無効な送信元です。');
+  } catch { return fail('無効な送信元です。'); }
+  try {
+    const source = await browser.tabs.get(sender.tab.id);
+    if (!message.videoId || youtubeVideoId(source.url ?? '') !== message.videoId) return fail('動画が切り替わりました。');
     const settings = readSettings((await browser.storage.local.get('settings')).settings);
     if (message.type === 'match') {
       if (!metadataValid(message.metadata) || typeof message.requestId !== 'string' || message.requestId.length > 100) return fail('動画情報が不足しています。');
@@ -48,7 +53,7 @@ async function handle(raw: unknown, sender: browser.runtime.MessageSender): Prom
     }
     if (message.type === 'search') {
       if (typeof message.term !== 'string' || message.term.length > 500) return fail('検索語が無効です。');
-      await openAppleMusic(`https://music.apple.com/${settings.storefront}/search?term=${encodeURIComponent(message.term)}`, sender.tab, settings);
+      await openAppleMusic(`https://music.apple.com/${settings.storefront}/search?term=${encodeURIComponent(message.term)}`, source, settings);
       return { ok: true, value: null };
     }
     if (message.type === 'select' || message.type === 'open' || message.type === 'album') {
@@ -67,7 +72,7 @@ async function handle(raw: unknown, sender: browser.runtime.MessageSender): Prom
       } else {
         const destination = message.target === 'album' ? candidate.album?.url : candidate.url;
         if (!destination) return fail('アルバムは取得できません。');
-        await openAppleMusic(destination, sender.tab, settings);
+        await openAppleMusic(destination, source, settings);
       }
       return { ok: true, value: null };
     }

@@ -1,5 +1,7 @@
 # iTunes主系統への切替（TASK-006 / 0.2.0）
 
+**0.2.1追記:** 通信呼び出し・SPA検証の修正とYouTubeアルバム補完を追加。契約/キャッシュはv3へ更新した。[修正記録](search-and-spa-fix.md)を参照。以下は0.2.0時点の方式変更記録。
+
 ## 決定
 
 利用者の明示指示により、Apple Music API + 必須Workerから、**iTunes Search/Lookupを主系統、MusicBrainzを補助とする認証不要の方式**へ切り替えた。この指示は既存AGENTS.md・元仕様書のApple Music API主系統という前提に優先する。本書を当該箇所の変更記録とする。前回のdocs/developer-account-free-design.mdは調査時点の案であり、下記実装が現在の動作。

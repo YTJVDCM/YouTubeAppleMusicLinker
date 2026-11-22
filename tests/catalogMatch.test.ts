@@ -46,3 +46,19 @@ it('does not call public APIs without permission or without a configured MusicBr
   permissions(); expect(await catalogMatch(metadata, DEFAULT_SETTINGS)).toMatchObject({ ok: true, value: { candidates: [] } });
   expect(resolve).not.toHaveBeenCalled();
 });
+it('uses YouTube album data to retrieve and prefer the matching release', async () => {
+  permissions();
+  const wrong = { ...song, album: { id: '10', title: 'Best Hits', url: 'https://music.apple.com/jp/album/10', tracks: [] } };
+  const right = { ...song, id: '2', album: { id: '20', title: 'Original Album', url: 'https://music.apple.com/jp/album/20', tracks: [] } };
+  const search = vi.spyOn(ITunes.prototype, 'search').mockResolvedValueOnce([wrong]).mockResolvedValueOnce([right]);
+  const result = await catalogMatch({ ...metadata, album: 'Original Album' }, settings);
+  expect(search).toHaveBeenLastCalledWith('artist song Original Album');
+  expect(result).toMatchObject({ ok: true, value: { ambiguous: true, candidates: [{ id: '2' }, { id: '1' }] } });
+});
+it('reports HTTP status separately from a network or invalid-response failure', async () => {
+  permissions();
+  const { PublicApiError } = await import('../src/services/publicApi');
+  vi.spyOn(ITunes.prototype, 'search').mockRejectedValue(new PublicApiError('upstream', undefined, 403));
+  const result = await catalogMatch(metadata, settings);
+  expect(result).toMatchObject({ ok: false, error: { code: 'upstream', httpStatus: 403, message: expect.stringContaining('HTTP 403') } });
+});

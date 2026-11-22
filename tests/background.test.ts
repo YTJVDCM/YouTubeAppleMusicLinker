@@ -1,13 +1,13 @@
 import { it, expect, vi, afterEach } from 'vitest';
 import type { Candidate } from '../src/shared/contracts';
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const candidate: Candidate = { provider: 'itunes', id: '1', kind: 'song', title: 'Song', artist: 'Artist', url: 'https://music.apple.com/jp/album/2?i=1',
   score: .95, confidence: 'high', reasons: [], method: 'metadata', audioUnconfirmed: false };
 async function setup(incognito = false) {
   vi.resetModules();
   let listener!: (message: unknown, sender: unknown) => Promise<any>;
   const source = { id: 1, windowId: 1, url: 'https://www.youtube.com/watch?v=abcdefghijk', cookieStoreId: 'firefox-default', incognito };
-  const sender = { tab: source, frameId: 0, id: 'addon', url: source.url };
+  const sender = { tab: { ...source }, frameId: 0, id: 'addon', url: source.url };
   const store: Record<string, unknown> = { settings: { endpoint: 'https://match.example/match' } };
   const set = vi.fn(async (value: object) => Object.assign(store, value));
   const create = vi.fn();
@@ -19,7 +19,7 @@ async function setup(incognito = false) {
     trackName: 'Song', artistName: 'Artist', collectionId: 2, collectionName: 'Album', trackTimeMillis: 200000 }] }));
   vi.stubGlobal('fetch', fetcher);
   await import('../src/entrypoints/background');
-  return { listener, sender, store, set, create, fetcher };
+  return { listener, sender, source, store, set, create, fetcher };
 }
 it('matches, caches, remembers explicit selections, then opens only a cached destination', async () => {
   const s = await setup();
@@ -37,10 +37,26 @@ it('matches, caches, remembers explicit selections, then opens only a cached des
 });
 it('rejects foreign frames/senders and stale video messages', async () => {
   const s = await setup(); const message = { type: 'search', videoId: 'abcdefghijk', term: 'Song' };
-  for (const change of [{ id: 'other' }, { frameId: 2 }, { url: 'https://www.youtube.com/watch?v=lmnopqrstuv' }]) {
+  for (const change of [{ id: 'other' }, { frameId: 2 }, { url: 'https://evil.example/watch?v=abcdefghijk' }]) {
     expect((await s.listener(message, { ...s.sender, ...change })).ok).toBe(false);
   }
   expect(s.create).not.toHaveBeenCalled(); expect(s.fetcher).not.toHaveBeenCalled();
+});
+it('retries after a failed search and SPA navigation with stale sender snapshots, but rejects the old video', async () => {
+  vi.useFakeTimers();
+  const s = await setup();
+  s.fetcher.mockResolvedValueOnce(new Response('', { status: 403 }));
+  expect((await s.listener({ type: 'match', videoId: 'abcdefghijk', requestId: 'old', metadata: { title: 'Artist - Song', channel: '' } }, s.sender)).ok).toBe(false);
+  s.source.url = 'https://www.youtube.com/watch?v=lmnopqrstuv';
+  expect(s.sender.tab.url).toContain('abcdefghijk');
+  const message = { type: 'match', videoId: 'lmnopqrstuv', requestId: 'new', refresh: true, metadata: { title: 'Artist - Song', channel: '' } };
+  const retried = s.listener(message, s.sender);
+  await vi.advanceTimersByTimeAsync(3500);
+  expect((await retried).ok).toBe(true);
+  expect(s.fetcher).toHaveBeenCalledTimes(2);
+  expect((await s.listener({ ...message, videoId: 'abcdefghijk' }, s.sender)).ok).toBe(false);
+  await s.listener({ type: 'open', videoId: message.videoId, candidateId: '1', kind: 'song', target: 'song' }, s.sender);
+  expect(s.create).toHaveBeenCalledTimes(1);
 });
 it('never persists private matches or manual selections', async () => {
   const s = await setup(true);

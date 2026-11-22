@@ -1,5 +1,6 @@
-import type { ApiResponse, MatchReply, PublicMetadata, Candidate, ContentMessage, Album } from '../shared/contracts';
-import { youtubeVideoId, appleMusicUrl } from '../shared/urls';
+import type { ApiResponse, MatchReply, Candidate, ContentMessage, Album } from '../shared/contracts';
+import { youtubeVideoId } from '../shared/urls';
+import { extractMetadata } from '../youtube/metadata';
 
 const HOST = 'yt-apple-music-linker';
 if (!document.getElementById(HOST)) mount();
@@ -80,7 +81,11 @@ function mount() {
     sync(); if (!videoId || loading) return;
     const id = videoId, ticket = ++generation; loading = true; panel.hidden = false;
     header(); text('p', 'iTunesで検索しています…'); panel.querySelector('button')?.focus();
-    const metadata = extract();
+    const metadata = extractMetadata(document, id);
+    if (!metadata) {
+      loading = false; header(); text('p', '動画情報を更新しています。少し待って再検索してください。');
+      action('再検索', () => void search(refresh)); return;
+    }
     try {
       const requestId = crypto.randomUUID();
       const response = await browser.runtime.sendMessage({ type: 'match', videoId: id, requestId, metadata, refresh }) as ApiResponse<MatchReply>;
@@ -116,13 +121,4 @@ function mount() {
     return Promise.resolve({ mounted: host.isConnected, watchPage: !!videoId, buttonHidden: button.hidden });
   });
   setInterval(sync, 1000); sync();
-}
-function extract(): PublicMetadata {
-  const title = document.querySelector('h1.ytd-watch-metadata')?.textContent?.trim() || document.title.replace(/ - YouTube$/, '');
-  const channel = document.querySelector('#owner #channel-name a')?.textContent?.trim() ?? '';
-  const duration = document.querySelector('video')?.duration;
-  const links = [...document.querySelectorAll<HTMLAnchorElement>('#description a[href]')]
-    .map(a => a.href).filter(u => !!appleMusicUrl(u)).slice(0, 5);
-  return { title: title.slice(0, 500), channel: channel.slice(0, 300),
-    durationSeconds: duration && Number.isFinite(duration) ? duration : undefined, directAppleMusicUrls: links };
 }

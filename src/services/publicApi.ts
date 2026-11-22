@@ -1,6 +1,6 @@
 import type { ErrorCode } from '../shared/contracts';
 export class PublicApiError extends Error {
-  constructor(public code: ErrorCode, public retryAfterSeconds?: number) { super(code); }
+  constructor(public code: ErrorCode, public retryAfterSeconds?: number, public httpStatus?: number) { super(code); }
 }
 export type JsonClient = (url: URL, headers?: Record<string, string>) => Promise<unknown>;
 /** One queue per provider, including retries and album lookups. No network before get(). */
@@ -20,7 +20,7 @@ export class PublicApi {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 8000);
         try {
-          const response = await this.fetcher(url.href, { signal: controller.signal, credentials: 'omit',
+          const response = await this.fetcher.call(globalThis, url.href, { signal: controller.signal, credentials: 'omit',
             redirect: 'error', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json', ...headers } });
           if (response.status === 429 || response.status === 503 || response.status >= 500) {
             const retryValue = response.headers.get('Retry-After');
@@ -32,9 +32,9 @@ export class PublicApi {
               this.nextAt = Math.max(this.nextAt, Date.now() + Math.max(this.spacingMs, (seconds ?? 0) * 1000));
               continue;
             }
-            throw new PublicApiError(response.status === 429 ? 'rate-limited' : 'upstream', Number.isFinite(seconds) ? seconds : undefined);
+            throw new PublicApiError(response.status === 429 ? 'rate-limited' : 'upstream', Number.isFinite(seconds) ? seconds : undefined, response.status);
           }
-          if (!response.ok) throw new PublicApiError('upstream');
+          if (!response.ok) { await response.body?.cancel(); throw new PublicApiError('upstream', undefined, response.status); }
           // Bound untrusted public responses as well as the request count.
           const reader = response.body?.getReader();
           if (!reader) throw new PublicApiError('invalid-response');

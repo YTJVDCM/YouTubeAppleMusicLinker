@@ -13,7 +13,7 @@ export class MusicBrainz {
   private async request(path: string, params: Record<string, string>) {
     const url = new URL(`/ws/2/${path}`, 'https://musicbrainz.org');
     url.search = new URLSearchParams({ ...params, fmt: 'json' }).toString();
-    return record(await this.get(url, { 'User-Agent': `YouTubeAppleMusicLinker/0.2.0 (${this.contact})` }));
+    return record(await this.get(url, { 'User-Agent': `YouTubeAppleMusicLinker/0.2.1 (${this.contact})` }));
   }
   async resolve(metadata: PublicMetadata): Promise<RecordingHint | undefined> {
     if (metadata.credits && metadata.credits.length > 1) return;

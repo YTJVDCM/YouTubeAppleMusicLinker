@@ -1,6 +1,18 @@
 import { it, expect, vi, afterEach } from 'vitest';
 import { PublicApi } from '../src/services/publicApi';
 afterEach(() => vi.useRealTimers());
+it('calls browser fetch with the global receiver rather than the PublicApi instance', async () => {
+  const fetcher = vi.fn(async function (this: typeof globalThis, _url: string | URL | Request, _init?: RequestInit) {
+    if (this !== globalThis) throw new TypeError('Illegal invocation');
+    return Response.json({ results: [] });
+  });
+  expect(await new PublicApi('https://itunes.apple.com', 0, fetcher).get(new URL('https://itunes.apple.com/search'))).toEqual({ results: [] });
+});
+it('preserves HTTP failure status without logging a query or response body', async () => {
+  const fetcher = vi.fn(async () => new Response('blocked', { status: 403 }));
+  await expect(new PublicApi('https://itunes.apple.com', 0, fetcher).get(new URL('https://itunes.apple.com/search')))
+    .rejects.toMatchObject({ code: 'upstream', httpStatus: 403 });
+});
 it('serializes all calls and spaces requests including album lookups', async () => {
   vi.useFakeTimers();
   const fetcher = vi.fn(async () => Response.json({ results: [] }));

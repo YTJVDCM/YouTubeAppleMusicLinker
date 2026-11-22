@@ -27,6 +27,11 @@ describe('matching safety', () => {
     expect(rank({ title: 'Artist - Song Official Music Video', channel: '', durationSeconds: 220 }, [mv]).candidates[0].audioUnconfirmed).toBe(true);
     expect(rank({ title: 'Artist - Song', channel: '', credits: [{ title: 'Song', artist: 'Artist' }, { title: 'Other', artist: 'Artist' }] }, [song]).candidates[0].score).toBeLessThan(.7);
   });
+  it('retains Live version conflicts when YouTube credits supply an unversioned song title', () => {
+    const result = rank({ title: 'Artist - Song Live', channel: '', album: 'Album',
+      credits: [{ title: 'Song', artist: 'Artist', album: 'Album' }] }, [song]);
+    expect(result.candidates[0].score).toBeLessThan(.7);
+  });
 });
 describe('untrusted inputs', () => {
   it.each(['http://music.apple.com/a', 'https://music.apple.com.evil/a', 'https://evil.music.apple.com/a',
@@ -51,7 +56,7 @@ describe('tab isolation and cache expiry', () => {
     expect(chooseTab([{ ...base, pinned: true }], source, { ...DEFAULT_SETTINGS, reusePinned: true })?.id).toBe(2);
   });
   it('expires automated results and retains manual choices', () => {
-    const entry = { version: 2, expiresAt: 100, manual: false } as CacheEntry;
+    const entry = { version: 3, expiresAt: 100, manual: false } as CacheEntry;
     expect(usable(entry, 99)).toBe(true); expect(usable(entry, 100)).toBe(false);
     expect(usable({ ...entry, manual: true }, 1000)).toBe(true);
   });

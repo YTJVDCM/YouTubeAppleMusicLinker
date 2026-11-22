@@ -1,5 +1,5 @@
 /** Versioned boundary shared by content, background, and catalog worker. */
-export const CONTRACT_VERSION = 2 as const;
+export const CONTRACT_VERSION = 3 as const;
 export type ResourceKind = 'song' | 'music-video';
 export type Confidence = 'high' | 'review' | 'low';
 export type MatchMethod = 'direct-url' | 'audio-isrc' | 'metadata' | 'musicbrainz-assisted';
@@ -10,7 +10,8 @@ export interface PublicMetadata {
   title: string;
   channel: string;
   durationSeconds?: number;
-  credits?: { title: string; artist: string }[];
+  album?: string;
+  credits?: { title: string; artist: string; album?: string }[];
   directAppleMusicUrls?: string[];
   /** Only verified audio-recording identifiers; never infer these from an MV. */
   audioIsrc?: string;
@@ -52,7 +53,7 @@ export interface MatchResult {
   notices?: string[];
 }
 export type ApiResponse<T> = { ok: true; value: T } |
-  { ok: false; error: { code: ErrorCode; message: string; retryAfterSeconds?: number } };
+  { ok: false; error: { code: ErrorCode; message: string; retryAfterSeconds?: number; httpStatus?: number } };
 export type ContentMessage =
   | { type: 'match'; videoId: string; requestId: string; metadata: PublicMetadata; refresh?: boolean }
   | { type: 'select'; videoId: string; candidateId: string; kind: ResourceKind }
