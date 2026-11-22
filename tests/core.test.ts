@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS } from '../src/shared/settings';
 import { usable } from '../src/services/cache';
 import { metadataValid } from '../src/shared/validation';
 import type { Candidate, CacheEntry } from '../src/shared/contracts';
-const song: Candidate = { id: '1', kind: 'song', title: 'Song', artist: 'Artist', url: 'https://music.apple.com/jp/song/1',
+const song: Candidate = { provider: 'itunes', id: '1', kind: 'song', title: 'Song', artist: 'Artist', url: 'https://music.apple.com/jp/song/1',
   durationSeconds: 200, score: 0, confidence: 'low', reasons: [], method: 'metadata', audioUnconfirmed: false };
 describe('matching safety', () => {
   it('removes decoration but preserves meaningful versions', () => {
@@ -51,7 +51,7 @@ describe('tab isolation and cache expiry', () => {
     expect(chooseTab([{ ...base, pinned: true }], source, { ...DEFAULT_SETTINGS, reusePinned: true })?.id).toBe(2);
   });
   it('expires automated results and retains manual choices', () => {
-    const entry = { version: 1, expiresAt: 100, manual: false } as CacheEntry;
+    const entry = { version: 2, expiresAt: 100, manual: false } as CacheEntry;
     expect(usable(entry, 99)).toBe(true); expect(usable(entry, 100)).toBe(false);
     expect(usable({ ...entry, manual: true }, 1000)).toBe(true);
   });

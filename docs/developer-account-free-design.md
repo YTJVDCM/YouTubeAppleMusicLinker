@@ -1,5 +1,7 @@
 # Developerアカウント不要の検索方式の調査（TASK-005）
 
+**追記:** 利用者の採用指示により、0.2.0でiTunes主系統・MusicBrainz補助を実装した。iTunes IDをApple MusicのURLへ対応付け、再生不可を照合から除外しない決定を採用。現在の動作は[実装記録](itunes-main-implementation.md)を参照。以下は採用前の調査・提案。
+
 ## 結論と位置付け
 
 調査日: 2026-11-22。**認証不要のiTunes Search APIを、Apple Music配信未確認のメタデータ検索モードとして追加する設計は可能**。Apple Music APIの完全な置換にはならない。通常のAppleアカウント認証だけでApple Music APIを使う案は、公式のDeveloper Token要件を解消しない。

@@ -1,4 +1,4 @@
-import type { MatchRequest } from '../../src/shared/contracts';
+import { CONTRACT_VERSION, type MatchRequest } from '../../src/shared/contracts';
 import { metadataValid } from '../../src/shared/validation';
 import { parseTitle } from '../../src/matching/normalize';
 import { rank } from '../../src/matching/score';
@@ -27,7 +27,7 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     }
     text += decoder.decode();
     const input = JSON.parse(text) as MatchRequest;
-    if (!input || typeof input !== 'object' || input.version !== 1 || typeof input.storefront !== 'string' ||
+    if (!input || typeof input !== 'object' || input.version !== CONTRACT_VERSION || typeof input.storefront !== 'string' ||
       !/^[a-z]{2}$/.test(input.storefront) || !metadataValid(input.metadata)) return fail('invalid-request', 400);
     const apple = new AppleMusic(env.APPLE_MUSIC_TOKEN, input.storefront);
     let candidates = [];

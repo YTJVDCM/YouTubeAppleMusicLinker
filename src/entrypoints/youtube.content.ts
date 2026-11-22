@@ -1,4 +1,4 @@
-import type { ApiResponse, MatchReply, PublicMetadata, Candidate, ContentMessage } from '../shared/contracts';
+import type { ApiResponse, MatchReply, PublicMetadata, Candidate, ContentMessage, Album } from '../shared/contracts';
 import { youtubeVideoId, appleMusicUrl } from '../shared/urls';
 
 const HOST = 'yt-apple-music-linker';
@@ -28,14 +28,18 @@ function mount() {
     button.hidden = !current;
   };
   const send = async (message: ContentMessage) => {
+    const ticket = generation;
     try {
       const response = await browser.runtime.sendMessage(message) as ApiResponse<unknown>;
+      if (ticket !== generation || youtubeVideoId(location.href) !== message.videoId) return;
       if (!response?.ok) text('p', response?.error?.message ?? '操作に失敗しました。');
-    } catch { text('p', '操作に失敗しました。再試行してください。'); }
+      else if (message.type === 'select') text('p', 'この候補を記憶しました。');
+    } catch { if (ticket === generation && youtubeVideoId(location.href) === message.videoId) text('p', '操作に失敗しました。再試行してください。'); }
   };
   const renderCandidate = (candidate: Candidate, id: string, selected?: { id: string; kind: string }) => {
     const article = document.createElement('article'); panel.append(article);
     text('h3', `${candidate.title} — ${candidate.artist}`, article);
+    text('p', candidate.provider === 'itunes' ? 'iTunesカタログで照合' : 'Apple Musicカタログで照合', article);
     if (selected?.id === candidate.id && selected.kind === candidate.kind) text('p', '記憶した選択', article);
     text('p', `${candidate.kind === 'song' ? '楽曲' : 'ミュージックビデオ'} / ${candidate.confidence === 'high' ? '高信頼候補' : '要確認'} / 一致スコア ${candidate.score.toFixed(2)}（正答確率ではありません）`, article);
     if (candidate.audioUnconfirmed) text('p', '対応音源は未確定です。', article);
@@ -53,13 +57,29 @@ function mount() {
       text('h4', candidate.album.title, article); text('p', candidate.album.releaseDate ?? '発売日不明', article);
       const list = document.createElement('ol'); article.append(list);
       for (const track of candidate.album.tracks) text('li', track.title, list);
+      if (!candidate.album.tracks.length && candidate.provider === 'itunes') {
+        const load = action('収録曲を表示', () => {
+          const ticket = generation; load.disabled = true; load.textContent = '収録曲を取得しています…';
+          void browser.runtime.sendMessage({ type: 'album', videoId: id, candidateId: candidate.id, kind: candidate.kind }).then((response: ApiResponse<Album>) => {
+            if (ticket !== generation || youtubeVideoId(location.href) !== id || !article.isConnected) return;
+            if (!response.ok) throw new Error(response.error.message);
+            list.replaceChildren();
+            for (const track of response.value.tracks) text('li', track.title, list);
+            text('p', '収録曲一覧はAPIが返す範囲で表示します。', article);
+            load.textContent = '収録曲を取得しました';
+          }).catch(() => {
+            if (ticket !== generation || youtubeVideoId(location.href) !== id || !article.isConnected) return;
+            load.disabled = false; load.textContent = '収録曲を再取得'; text('p', '収録曲の取得に失敗しました。再試行できます。', article);
+          });
+        }, article);
+      }
       action('アルバムを開く', () => void send({ type: 'open', videoId: id, candidateId: candidate.id, kind: candidate.kind, target: 'album' }), article);
     }
   };
   async function search(refresh = false) {
     sync(); if (!videoId || loading) return;
     const id = videoId, ticket = ++generation; loading = true; panel.hidden = false;
-    header(); text('p', '検索しています…'); panel.querySelector('button')?.focus();
+    header(); text('p', 'iTunesで検索しています…'); panel.querySelector('button')?.focus();
     const metadata = extract();
     try {
       const requestId = crypto.randomUUID();
@@ -68,6 +88,8 @@ function mount() {
       header();
       if (!response?.ok) text('p', response?.error?.message ?? '検索に失敗しました。');
       else if (response.value.videoId === id && response.value.requestId === requestId) {
+        text('p', 'Apple Musicで再生できない楽曲も含まれます。再生可否は移動先で確認してください。');
+        for (const notice of response.value.result.notices ?? []) text('p', notice);
         if (!response.value.result.candidates.length) text('p', '候補が見つかりませんでした。');
         if (response.value.result.ambiguous) text('p', '複数の近い候補があります。曲・版・収録盤を確認して選択してください。');
         const candidates = [...response.value.result.candidates].sort((a, b) =>

@@ -37,7 +37,7 @@ it('runs the catalog contract through matching and album enrichment without a vi
   });
   vi.stubGlobal('fetch', fetcher);
   const request = new Request('https://worker.example/match', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ version: 1, storefront: 'jp', metadata: { title: 'Artist - Song', channel: 'Artist', durationSeconds: 200 } }) });
+    body: JSON.stringify({ version: 2, storefront: 'jp', metadata: { title: 'Artist - Song', channel: 'Artist', durationSeconds: 200 } }) });
   const response = await handle(request, { APPLE_MUSIC_TOKEN: 'dummy', RATE_LIMITER: { limit: async () => ({ success: true }) } });
   expect(response.status).toBe(200);
   const data = await response.json() as any;

@@ -1,10 +1,10 @@
 /** Versioned boundary shared by content, background, and catalog worker. */
-export const CONTRACT_VERSION = 1 as const;
+export const CONTRACT_VERSION = 2 as const;
 export type ResourceKind = 'song' | 'music-video';
 export type Confidence = 'high' | 'review' | 'low';
-export type MatchMethod = 'direct-url' | 'audio-isrc' | 'metadata';
+export type MatchMethod = 'direct-url' | 'audio-isrc' | 'metadata' | 'musicbrainz-assisted';
 export type ErrorCode = 'invalid-request' | 'not-configured' | 'unauthorized' |
-  'rate-limited' | 'timeout' | 'upstream' | 'network' | 'invalid-response';
+  'rate-limited' | 'timeout' | 'upstream' | 'network' | 'invalid-response' | 'permission-denied';
 
 export interface PublicMetadata {
   title: string;
@@ -24,6 +24,7 @@ export interface Album {
   tracks: { id: string; title: string; number?: number }[];
 }
 export interface Candidate {
+  provider: 'itunes' | 'apple-music';
   id: string;
   kind: ResourceKind;
   title: string;
@@ -48,6 +49,7 @@ export interface MatchRequest {
 export interface MatchResult {
   candidates: Candidate[];
   ambiguous: boolean;
+  notices?: string[];
 }
 export type ApiResponse<T> = { ok: true; value: T } |
   { ok: false; error: { code: ErrorCode; message: string; retryAfterSeconds?: number } };
@@ -55,7 +57,9 @@ export type ContentMessage =
   | { type: 'match'; videoId: string; requestId: string; metadata: PublicMetadata; refresh?: boolean }
   | { type: 'select'; videoId: string; candidateId: string; kind: ResourceKind }
   | { type: 'open'; videoId: string; candidateId: string; kind: ResourceKind; target: 'song' | 'album' }
-  | { type: 'search'; videoId: string; term: string };
+  | { type: 'search'; videoId: string; term: string }
+  | AlbumMessage;
+export type AlbumMessage = { type: 'album'; videoId: string; candidateId: string; kind: ResourceKind };
 export interface MatchReply {
   videoId: string;
   requestId: string;

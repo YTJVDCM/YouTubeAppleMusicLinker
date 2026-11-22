@@ -11,6 +11,11 @@ it('separates regions, gives negative results a short TTL, and preserves manual 
   expect(entry.expiresAt - entry.createdAt).toBe(86400000);
   expect(await getCached('us', 'abcdefghijk')).toBeUndefined();
   expect(cacheKey('jp', 'abcdefghijk')).not.toBe(cacheKey('us', 'abcdefghijk'));
+  expect(cacheKey('jp', 'abcdefghijk')).toContain('v2:itunes:');
+  store['match:jp:abcdefghijk'] = { ...entry, version: 1, manual: true };
+  delete store[cacheKey('jp', 'abcdefghijk')];
+  expect(await getCached('jp', 'abcdefghijk')).toBeUndefined();
+  await putCached('jp', 'abcdefghijk', result);
   const manual = await putCached('jp', 'abcdefghijk', result, { id: '1', kind: 'song' });
   expect((await putCached('jp', 'abcdefghijk', result)).selected).toEqual(manual.selected);
   vi.advanceTimersByTime(86400001);

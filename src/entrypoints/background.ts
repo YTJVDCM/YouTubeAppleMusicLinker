@@ -2,8 +2,9 @@ import type { ApiResponse, ContentMessage, MatchReply, MatchResult } from '../sh
 import { readSettings } from '../shared/settings';
 import { youtubeVideoId } from '../shared/urls';
 import { metadataValid } from '../shared/validation';
-import { getCached, putCached } from '../services/cache';
-import { matchClient } from '../services/matchClient';
+import { cacheKey, getCached, putCached } from '../services/cache';
+import { catalogMatch } from '../services/catalogMatch';
+import { ITunes } from '../services/itunes';
 import { openAppleMusic } from '../services/tabNavigation';
 
 const pending = new Map<string, Promise<ApiResponse<MatchResult>>>();
@@ -27,11 +28,11 @@ async function handle(raw: unknown, sender: browser.runtime.MessageSender): Prom
       if (cached && !message.refresh) return { ok: true, value: { videoId: message.videoId, requestId: message.requestId,
         result: cached.result, selected: cached.selected } satisfies MatchReply };
       // A refresh explicitly discards a previous manual mapping.
-      if (message.refresh && !sender.tab.incognito) await browser.storage.local.remove(`match:${settings.storefront}:${message.videoId}`);
+      if (message.refresh && !sender.tab.incognito) await browser.storage.local.remove(cacheKey(settings.storefront, message.videoId));
       const key = `${sender.tab.incognito}:${sender.tab.cookieStoreId}:${settings.storefront}:${message.videoId}`;
       let task = pending.get(key);
       if (!task) {
-        task = matchClient(settings.endpoint, { version: 1, storefront: settings.storefront, metadata: message.metadata });
+        task = catalogMatch(message.metadata, settings);
         pending.set(key, task);
         void task.finally(() => pending.delete(key));
       }
@@ -50,11 +51,16 @@ async function handle(raw: unknown, sender: browser.runtime.MessageSender): Prom
       await openAppleMusic(`https://music.apple.com/${settings.storefront}/search?term=${encodeURIComponent(message.term)}`, sender.tab, settings);
       return { ok: true, value: null };
     }
-    if (message.type === 'select' || message.type === 'open') {
+    if (message.type === 'select' || message.type === 'open' || message.type === 'album') {
       const cached = sender.tab.incognito ? undefined : await getCached(settings.storefront, message.videoId);
       const result = sender.tab.incognito ? privateResults.get(`${sender.tab.id}:${settings.storefront}:${message.videoId}`) : cached?.result;
       const candidate = result?.candidates.find(c => c.id === message.candidateId && c.kind === message.kind);
       if (!candidate) return fail('候補を再検索してください。');
+      if (message.type === 'album') {
+        if (!candidate.album) return fail('アルバムは取得できません。');
+        const album = await new ITunes(settings.storefront).album(candidate.album.id);
+        return album ? { ok: true, value: album } : fail('収録曲が見つかりませんでした。');
+      }
       if (message.type === 'select') {
         if (!sender.tab.incognito) await putCached(settings.storefront, message.videoId, cached!.result,
           { id: candidate.id, kind: candidate.kind });

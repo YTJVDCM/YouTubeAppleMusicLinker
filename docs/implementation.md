@@ -1,5 +1,7 @@
 # MVP実装と検証
 
+**現在の方式（0.2.0）:** iTunesを主系統・MusicBrainzを補助とするサーバー不要の検索へ変更済み。現在のセットアップと差分は[切替記録](itunes-main-implementation.md)と[実機チェック](manual-checks.md)を参照。以下のWorker必須・endpoint設定に関する説明は0.1.x時点の記録であり、通常利用には不要。
+
 ## 構成と判断
 
 TASK-001の所有範囲は、新規のsrc/、worker/、scripts/、tests/、ビルド設定、manifest.json、この文書と手動検証手順、および空だった.gitignoreへの追記。親Codexが単独で実装し、委譲・並列Git操作はしていない。既存AGENTS.md、Claude.md、製品仕様書、.claude/は変更・コミットしない。

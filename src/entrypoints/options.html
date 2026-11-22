@@ -2,14 +2,17 @@
 <html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Apple Music Linker 設定</title>
 <body><h1>Apple Music Linker 設定</h1>
-<p>検索ボタンを押すと、動画タイトル・チャンネル名・再生時間・説明欄のApple Musicリンクを設定した照合サーバーへ送信します。動画URLや音声は送信しません。</p>
+<p>照合サーバーやDeveloperアカウントは不要です。検索ボタンを押すと、曲名・アーティスト等の検索語と地域をiTunesへ送信します。必要な場合にMusicBrainzで表記を補います。動画URL・動画ID・音声・Cookieは送信しません。</p>
+<p>iTunesの候補をApple Musicで開きます。再生できない楽曲も候補に含まれます。再生可否はApple Musicで確認してください。</p>
 <form id="settings">
-<p><label>照合サーバーのHTTPS URL（/matchを含む） <input id="endpoint" type="url" required size="55"></label></p>
 <p><label>ストアフロント <input id="storefront" pattern="[a-z]{2}" maxlength="2" required></label></p>
+<p><label><input id="useMusicBrainz" type="checkbox">候補なし・一致が弱い場合にMusicBrainzで補助照合</label></p>
+<p><label>MusicBrainz用のアプリ公開URLまたは連絡先 <input id="musicBrainzContact" type="text" maxlength="250" size="45"></label></p>
+<p>MusicBrainzにはアプリ識別用としてこの連絡先も送信します。未登録の場合でもiTunes検索は動作します。</p>
 <p><label><input id="reuseTabs" type="checkbox">既存Apple Musicタブを再利用</label></p>
 <p><label><input id="protectAudible" type="checkbox">音声再生中のタブを保護</label></p>
 <p><label><input id="reusePinned" type="checkbox">ピン留めタブも再利用</label></p>
 <p><label><input id="reuseOtherWindows" type="checkbox">別ウィンドウのタブも再利用</label></p>
-<button type="submit">保存してサーバーへの接続を許可</button>
+<button type="submit">保存して検索APIへの接続を許可</button>
 </form><p><button id="clear">照合キャッシュをすべて削除</button></p>
 <p id="status" role="status"></p><script src="options.js"></script></body></html>

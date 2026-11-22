@@ -1,6 +1,6 @@
-import { readSettings, type Settings } from '../shared/settings';
+import { readSettings, validContact, type Settings } from '../shared/settings';
 const status = document.getElementById('status')!;
-const fields = ['endpoint', 'storefront', 'reuseTabs', 'protectAudible', 'reusePinned', 'reuseOtherWindows'] as const;
+const fields = ['storefront', 'useMusicBrainz', 'musicBrainzContact', 'reuseTabs', 'protectAudible', 'reusePinned', 'reuseOtherWindows'] as const;
 void browser.storage.local.get('settings').then(data => {
   const settings = readSettings(data.settings);
   for (const key of fields) {
@@ -14,11 +14,16 @@ document.getElementById('settings')!.addEventListener('submit', e => {
   const input: Record<string, unknown> = {};
   for (const key of fields) { const el = document.getElementById(key) as HTMLInputElement; input[key] = el.type === 'checkbox' ? el.checked : el.value.trim(); }
   const settings: Settings = readSettings(input);
-  if (!settings.endpoint) { status.textContent = '資格情報を含まないHTTPS URLを入力してください。'; return; }
+  if (input.musicBrainzContact && !validContact(input.musicBrainzContact as string)) {
+    status.textContent = '連絡先には公開HTTPS URLまたはメールアドレスを入力してください。'; return;
+  }
+  const origins = ['https://itunes.apple.com/*'];
+  if (settings.useMusicBrainz && settings.musicBrainzContact) origins.push('https://musicbrainz.org/*');
   // request() runs directly within the user's submit gesture.
-  void browser.permissions.request({ origins: [`${new URL(settings.endpoint).origin}/*`] }).then(async granted => {
+  void browser.permissions.request({ origins }).then(async granted => {
     if (!granted) { status.textContent = '接続権限が許可されませんでした。'; return; }
-    await browser.storage.local.set({ settings }); status.textContent = '保存しました。';
+    await browser.storage.local.set({ settings }); status.textContent = settings.useMusicBrainz && !settings.musicBrainzContact ?
+      '保存しました。iTunes検索を利用できます。MusicBrainz補助にはアプリの連絡先を登録してください。' : '保存しました。';
   }).catch(() => { status.textContent = '設定を保存できませんでした。'; });
 });
 document.getElementById('clear')!.addEventListener('click', () => {

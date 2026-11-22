@@ -5,7 +5,8 @@ export function validResult(value: unknown): value is MatchResult {
   if (!value || typeof value !== 'object') return false;
   const result = value as MatchResult;
   return typeof result.ambiguous === 'boolean' && Array.isArray(result.candidates) && result.candidates.length <= 25 &&
-    result.candidates.every(c => c && typeof c.id === 'string' && /^(song|music-video)$/.test(c.kind) &&
+    (result.notices === undefined || (Array.isArray(result.notices) && result.notices.every(n => typeof n === 'string'))) &&
+    result.candidates.every(c => c && ['itunes', 'apple-music'].includes(c.provider) && typeof c.id === 'string' && /^(song|music-video)$/.test(c.kind) &&
       typeof c.title === 'string' && typeof c.artist === 'string' && !!appleMusicUrl(c.url) &&
       Number.isFinite(c.score) && c.score >= 0 && c.score <= 1 &&
       ['high', 'review', 'low'].includes(c.confidence) && Array.isArray(c.reasons) &&

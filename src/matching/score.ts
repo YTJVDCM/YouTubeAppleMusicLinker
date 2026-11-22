@@ -9,7 +9,7 @@ export function similarity(a: string, b: string): number {
   const x = grams(a), y = grams(b);
   return x.size + y.size ? 2 * [...x].filter(v => y.has(v)).length / (x.size + y.size) : 0;
 }
-export function rank(metadata: PublicMetadata, candidates: Candidate[]) {
+export function rank(metadata: PublicMetadata, candidates: Candidate[], artistNames: string[] = []) {
   const parsed = parseTitle(metadata.title, metadata.channel);
   const credit = metadata.credits?.length === 1 ? metadata.credits[0] : undefined;
   const title = credit?.title ?? parsed.title;
@@ -21,12 +21,13 @@ export function rank(metadata: PublicMetadata, candidates: Candidate[]) {
     const delta = metadata.durationSeconds && candidate.durationSeconds ?
       Math.abs(metadata.durationSeconds - candidate.durationSeconds) : undefined;
     const duration = delta === undefined ? 0 : Math.max(0, 1 - delta / (parsed.isMv ? 60 : 15));
-    let score = .35 * similarity(artist, candidate.artist) + .35 * similarity(title, candidate.title) +
+    const artistMatch = Math.max(similarity(artist, candidate.artist), ...artistNames.map(name => similarity(name, candidate.artist)));
+    let score = .35 * artistMatch + .35 * similarity(title, candidate.title) +
       .15 * duration + .15 * (conflict ? 0 : 1);
     if (conflict) score = Math.min(score, .49);
     if (metadata.credits && metadata.credits.length > 1) score = Math.min(score, .69);
     return { ...candidate, score, confidence: (score >= .9 ? 'high' : score >= .7 ? 'review' : 'low') as Candidate['confidence'],
-      reasons: [conflict ? 'バージョンに相違があります' : '曲名・アーティスト・版情報を比較',
+      reasons: [...candidate.reasons, conflict ? 'バージョンに相違があります' : '曲名・アーティスト・版情報を比較',
         ...(delta === undefined ? ['再生時間は照合できません'] : [])] };
   }).sort((a, b) => b.score - a.score);
   const ambiguous = ranked.length > 1 && ranked[0].score - ranked[1].score < .05;

@@ -32,7 +32,7 @@ export class AppleMusic {
     const a = resource.attributes;
     if (!a || typeof resource.id !== 'string' || !['songs', 'music-videos'].includes(resource.type) ||
       typeof a.name !== 'string' || typeof a.artistName !== 'string' || !appleMusicUrl(a.url)) return;
-    return { id: resource.id, kind: resource.type === 'songs' ? 'song' : 'music-video', title: a.name,
+    return { provider: 'apple-music', id: resource.id, kind: resource.type === 'songs' ? 'song' : 'music-video', title: a.name,
       artist: a.artistName, url: a.url, durationSeconds: typeof a.durationInMillis === 'number' ? a.durationInMillis / 1000 : undefined,
       artworkUrl: artwork(a.artwork?.url), score: 0, confidence: 'low', reasons: [], method: 'metadata',
       audioUnconfirmed: resource.type === 'music-videos' };
